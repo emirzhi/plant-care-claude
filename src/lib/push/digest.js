@@ -16,6 +16,22 @@ export function localHourInTimezone(timezone, now = new Date()) {
   }
 }
 
+// Returns the current local date in the given IANA timezone as YYYY-MM-DD
+// (matching a Postgres `date`). Null for an unrecognized timezone.
+export function localDateInTimezone(timezone, now = new Date()) {
+  try {
+    // en-CA renders as YYYY-MM-DD.
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+  } catch {
+    return null;
+  }
+}
+
 export function buildDigestPayload(overdueTasks) {
   const count = overdueTasks.length;
   const plantNames = [...new Set(overdueTasks.map((t) => t.plants?.nickname).filter(Boolean))];

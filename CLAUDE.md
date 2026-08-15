@@ -67,7 +67,10 @@ a new migration to ALTER the other.
 - **profiles** — 1:1 with `auth.users`, auto-created by the `handle_new_user()`
   trigger (SECURITY DEFINER) on signup. Columns: `email`, `display_name`,
   `avatar_url`, `timezone` (IANA name, default `UTC`), `reminder_hour`
-  (0-23, default 9 — used by the push digest cron).
+  (0-23, default 9 — used by the push digest cron), and
+  `last_digest_sent_on` (date, added in
+  `20260815185745_add_digest_idempotency.sql` — the user's local date of the
+  last digest, so a retried/overlapping trigger can't double-send).
 - **species_care_profiles** — cache of Claude-generated care profiles, keyed
   by `scientific_name_key` (`lower(trim(scientific_name))`, UNIQUE). Shared
   across all users — identifying the same species again reuses this row
@@ -279,13 +282,30 @@ identification. Flag if that's needed later.
   holds the browser side, `src/lib/push/webPush.js` the server side. A send
   that returns 404/410 means the endpoint is dead — the cron route deletes
   that row rather than retrying it forever.
-- **Daily digest cron**: `vercel.json` runs `/api/cron/push-digest` **hourly**
-  (`0 * * * *`). Each run selects users whose *local* hour (via
+- **⚠️ `navigator.serviceWorker.ready` never settles when no service worker
+  is registered** — it doesn't reject, it hangs forever. Since there is no
+  service worker in `next dev`, awaiting it directly made the "enable
+  notifications" toggle spin silently with no error. Always go through
+  `getActiveRegistration()` in `subscribeClient.js`, which races `ready`
+  against a timeout and resolves to `null` instead. The SW check runs
+  *before* `Notification.requestPermission()` so a failure doesn't burn the
+  one-shot permission prompt.
+- **Daily digest cron — triggered by GitHub Actions, NOT `vercel.json`.**
+  `.github/workflows/push-digest.yml` curls `/api/cron/push-digest` hourly.
+  **Vercel Hobby only allows *daily* crons**, and it rejects an hourly
+  `crons` entry at deploy time — but per-timezone delivery fundamentally
+  needs an hourly tick, since each run selects users whose *local* hour (via
   `Intl.DateTimeFormat` with their `profiles.timezone`) equals their
-  `reminder_hour` — that's how one hourly job delivers at each user's chosen
-  local time. Protected by `CRON_SECRET` (Vercel Cron sends it as
-  `Authorization: Bearer <CRON_SECRET>` automatically). Uses the
-  service-role admin client, since it deliberately reads across all users.
+  `reminder_hour`. Hence there is deliberately no `vercel.json`; don't
+  re-add a `crons` entry unless the account moves to Pro.
+  Requires repo secrets `APP_URL` and `CRON_SECRET` (the latter matching the
+  Vercel env var). Protected by `CRON_SECRET` as a bearer token; uses the
+  service-role admin client since it reads across all users.
+  **Idempotent per local day** via `profiles.last_digest_sent_on` — GitHub's
+  scheduler can drift and retry, so the route skips anyone already sent
+  today in their own timezone. The date is only recorded once a send
+  actually succeeds on at least one device, so a transient push failure
+  retries on the next tick instead of silently eating the day's digest.
 - **Settings** (`/settings`) — push enable/disable per device + reminder hour
   + timezone (with a "use detected timezone" helper). The timezone is
   validated against `Intl` before saving; a bad value would silently exclude

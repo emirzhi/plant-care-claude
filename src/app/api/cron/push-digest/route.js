@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNotification } from "@/lib/push/webPush";
-import { localHourInTimezone, buildDigestPayload } from "@/lib/push/digest";
+import {
+  localHourInTimezone,
+  localDateInTimezone,
+  buildDigestPayload,
+} from "@/lib/push/digest";
 
-// Vercel Cron hits this hourly (see vercel.json). Each run sends the digest
-// only to users whose *local* hour currently equals their reminder_hour, so
-// everyone gets it at their chosen time regardless of timezone.
+// Triggered hourly by .github/workflows/push-digest.yml (Vercel Hobby only
+// allows *daily* crons, and per-timezone delivery needs an hourly tick).
+// Each run sends the digest only to users whose *local* hour currently equals
+// their reminder_hour, so everyone gets it at their chosen time regardless of
+// timezone.
+//
+// Idempotent per local day via profiles.last_digest_sent_on, so a retried or
+// overlapping trigger can't send the same user two digests.
 //
 // Uses the service-role client: it deliberately reads across all users, which
 // RLS would (correctly) forbid for a normal session.
@@ -15,9 +24,7 @@ export const maxDuration = 60;
 function isAuthorized(request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
+  return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
 export async function GET(request) {
@@ -30,14 +37,17 @@ export async function GET(request) {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, timezone, reminder_hour");
+    .select("id, timezone, reminder_hour, last_digest_sent_on");
   if (profilesError) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
 
-  const dueUsers = (profiles ?? []).filter(
-    (p) => localHourInTimezone(p.timezone, now) === p.reminder_hour,
-  );
+  const dueUsers = (profiles ?? []).filter((p) => {
+    if (localHourInTimezone(p.timezone, now) !== p.reminder_hour) return false;
+    // Already sent during this user's local day.
+    const localDate = localDateInTimezone(p.timezone, now);
+    return localDate !== null && p.last_digest_sent_on !== localDate;
+  });
 
   let notified = 0;
   let skipped = 0;
@@ -67,17 +77,29 @@ export async function GET(request) {
     }
 
     const payload = buildDigestPayload(overdueTasks);
+    let deliveredToAnyDevice = false;
 
     for (const subscription of subscriptions) {
       const result = await sendNotification(subscription, payload);
       if (result.ok) {
         notified += 1;
+        deliveredToAnyDevice = true;
       } else if (result.gone) {
         // Push service says this endpoint is dead — drop it so it isn't
         // retried on every subsequent run.
         await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
         pruned += 1;
       }
+    }
+
+    // Only mark the day as sent if something actually landed; a transient
+    // push-service failure should be retried on the next hourly tick rather
+    // than silently swallowing today's digest.
+    if (deliveredToAnyDevice) {
+      await supabase
+        .from("profiles")
+        .update({ last_digest_sent_on: localDateInTimezone(profile.timezone, now) })
+        .eq("id", profile.id);
     }
   }
 

@@ -1,0 +1,41 @@
+name: Push digest
+
+# Hits the daily-digest endpoint once an hour. The route itself decides who is
+# due: it sends only to users whose *local* hour matches their reminder_hour,
+# which is why this has to tick hourly rather than daily.
+#
+# This lives here instead of vercel.json because Vercel Hobby only permits
+# daily cron jobs — an hourly `crons` entry is rejected at deploy time.
+#
+# Required repo secrets (Settings > Secrets and variables > Actions):
+#   APP_URL      e.g. https://your-app.vercel.app  (no trailing slash)
+#   CRON_SECRET  same value as the CRON_SECRET env var in Vercel
+on:
+  schedule:
+    # GitHub's scheduler can drift by 5-15 minutes under load. That's fine for
+    # a once-a-day digest, but it means delivery isn't exactly on the hour.
+    - cron: "0 * * * *"
+  workflow_dispatch: # lets you trigger a run by hand to test
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest
+        run: |
+          response=$(curl --silent --show-error --fail-with-body \
+            --max-time 60 \
+            --write-out "\n%{http_code}" \
+            --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/push-digest")
+
+          body=$(echo "$response" | sed '$d')
+          status=$(echo "$response" | tail -n1)
+
+          echo "HTTP $status"
+          echo "$body"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::Digest endpoint returned $status"
+            exit 1
+          fi
