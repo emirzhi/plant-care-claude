@@ -18,10 +18,10 @@ export default function SignOutButton() {
     <button
       type="button"
       onClick={handleSignOut}
-      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-100"
+      aria-label="Sign out"
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-muted hover:text-ink"
     >
-      <FiLogOut size={16} />
-      Sign out
+      <FiLogOut size={17} />
     </button>
   );
 }

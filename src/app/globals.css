@@ -1,26 +1,159 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Every component styles against these semantic names
+ * (bg-surface, text-ink, border-line, ...) rather than raw Tailwind palette
+ * colors, so light/dark stay consistent and there's one place to retune.
+ *
+ * Both themes are defined here in full. Never give a color its only
+ * definition inside the dark block.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --canvas: #f7f6f1; /* page background — warm off-white */
+  --surface: #ffffff; /* cards, inputs */
+  --surface-muted: #efeee7; /* subtle fills, inactive chips */
+  --line: #e2e0d6; /* borders, dividers */
+  --line-strong: #cfccbe;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --ink: #1b1e18; /* primary text */
+  --ink-muted: #6d7268; /* secondary text */
+  --ink-faint: #9a9e93; /* tertiary / placeholder */
+
+  --brand: #2f6b43; /* deep leaf green */
+  --brand-hover: #275a38;
+  --brand-ink: #ffffff; /* text on brand */
+  --brand-soft: #e4efe7; /* tinted brand background */
+  --brand-soft-ink: #1f4f30;
+
+  --danger: #a83f2b; /* overdue */
+  --danger-soft: #fae9e5;
+  --danger-soft-ink: #8c3524;
+
+  --warn: #96650b; /* due soon */
+  --warn-soft: #fbf0dc;
+  --warn-soft-ink: #7a520a;
+
+  --ok: #2f6b43; /* on schedule */
+  --ok-soft: #e4efe7;
+  --ok-soft-ink: #1f4f30;
+
+  --ring: #2f6b43;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --canvas: #13150f;
+    --surface: #1b1e17;
+    --surface-muted: #262a21;
+    --line: #333829;
+    --line-strong: #454b3a;
+
+    --ink: #ecefe6;
+    --ink-muted: #9ba394;
+    --ink-faint: #6f7768;
+
+    --brand: #7cc394;
+    --brand-hover: #93d1a7;
+    --brand-ink: #10230f;
+    --brand-soft: #1e2e22;
+    --brand-soft-ink: #a8dcbb;
+
+    --danger: #e08c76;
+    --danger-soft: #33201b;
+    --danger-soft-ink: #f0b3a2;
+
+    --warn: #d9a961;
+    --warn-soft: #322717;
+    --warn-soft-ink: #e8c489;
+
+    --ok: #7cc394;
+    --ok-soft: #1e2e22;
+    --ok-soft-ink: #a8dcbb;
+
+    --ring: #7cc394;
   }
 }
 
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-ink: var(--brand-soft-ink);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-ink: var(--danger-soft-ink);
+
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-soft-ink: var(--warn-soft-ink);
+
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-soft-ink: var(--ok-soft-ink);
+
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Shared primitives — used often enough that repeating the utility strings
+   across every component would drift. */
+@layer components {
+  .field {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+           outline-none transition
+           placeholder:text-ink-faint
+           focus:border-brand focus:ring-2 focus:ring-brand/25;
+  }
+
+  /* Tailwind v4's @apply can't reference another custom class, so the shared
+     button base is a grouped selector rather than `.btn-primary { @apply btn }`. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-medium transition
+           disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .btn-primary {
+    @apply bg-brand text-brand-ink hover:bg-brand-hover;
+  }
+
+  .btn-secondary {
+    @apply border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-muted;
+  }
+
+  .btn-ghost {
+    @apply text-ink-muted hover:bg-surface-muted hover:text-ink;
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
 }

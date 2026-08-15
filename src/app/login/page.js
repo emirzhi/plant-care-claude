@@ -1,10 +1,15 @@
-import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 
-export default function LoginPage() {
+// searchParams are read here (server) rather than with useSearchParams in the
+// client component — that hook forces a client-side bail-out, which rendered
+// the whole login screen blank until JS loaded.
+export default async function LoginPage({ searchParams }) {
+  const { next, error } = await searchParams;
+
   return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
+    <LoginForm
+      nextPath={typeof next === "string" ? next : "/plants"}
+      callbackError={typeof error === "string" ? error : null}
+    />
   );
 }

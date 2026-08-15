@@ -1,58 +1,79 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { FiPlus } from "react-icons/fi";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { FiPlus, FiX } from "react-icons/fi";
 import { addCustomTaskAction } from "@/lib/care-tasks/actions";
 
 const initialState = { error: null, success: false };
 
 export default function AddCustomTaskForm({ plantId }) {
   const [state, formAction, pending] = useActionState(addCustomTaskAction, initialState);
+  const [open, setOpen] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
-    if (state.success) formRef.current?.reset();
+    if (state.success) {
+      formRef.current?.reset();
+      setOpen(false);
+    }
   }, [state.success]);
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 text-sm font-medium text-ink-muted transition hover:border-line-strong hover:text-ink"
+      >
+        <FiPlus size={16} />
+        Add a custom task
+      </button>
+    );
+  }
+
   return (
-    <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-2 pt-2">
+    <form ref={formRef} action={formAction} className="card space-y-3 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-ink">New task</p>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          aria-label="Cancel"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-faint transition hover:bg-surface-muted hover:text-ink"
+        >
+          <FiX size={16} />
+        </button>
+      </div>
+
       <input type="hidden" name="plant_id" value={plantId} />
-      <div className="flex-1 min-w-[10rem]">
-        <label htmlFor="display_name" className="mb-1 block text-xs font-medium text-neutral-600">
-          Custom task name
-        </label>
+
+      <div className="flex gap-2">
         <input
-          id="display_name"
           name="display_name"
           required
+          autoFocus
           placeholder="e.g. Wipe leaves"
-          className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm outline-none focus:border-neutral-500"
+          className="field flex-1"
         />
+        <div className="flex items-center gap-1.5 text-sm text-ink-muted">
+          <input
+            name="interval_days"
+            type="number"
+            min={1}
+            defaultValue={14}
+            required
+            aria-label="Interval in days"
+            className="field w-16 !px-2 text-center"
+          />
+          days
+        </div>
       </div>
-      <div>
-        <label htmlFor="interval_days" className="mb-1 block text-xs font-medium text-neutral-600">
-          Every (days)
-        </label>
-        <input
-          id="interval_days"
-          name="interval_days"
-          type="number"
-          min={1}
-          defaultValue={14}
-          required
-          className="w-20 rounded-md border border-neutral-300 px-2 py-1.5 text-center text-sm outline-none focus:border-neutral-500"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
-      >
-        <FiPlus size={15} />
+
+      {state.error && <p className="text-sm text-danger">{state.error}</p>}
+
+      <button type="submit" disabled={pending} className="btn-primary w-full !py-2">
         {pending ? "Adding..." : "Add task"}
       </button>
-
-      {state.error && <p className="w-full text-sm text-red-600">{state.error}</p>}
     </form>
   );
 }

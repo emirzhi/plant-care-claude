@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiCamera, FiAlertCircle } from "react-icons/fi";
+import Link from "next/link";
+import { FiCamera, FiAlertCircle, FiArrowLeft, FiRefreshCw } from "react-icons/fi";
+import { PiPlantFill } from "react-icons/pi";
 import CandidateCard from "@/components/plants/CandidateCard";
 import CareProfileSummary from "@/components/plants/CareProfileSummary";
 import TaskIntervalRow from "@/components/plants/TaskIntervalRow";
@@ -17,6 +19,35 @@ const STEPS = {
   SAVING: "saving",
 };
 
+const STEP_INDEX = {
+  [STEPS.PHOTO]: 0,
+  [STEPS.IDENTIFYING]: 0,
+  [STEPS.CANDIDATES]: 1,
+  [STEPS.LOADING_CARE]: 1,
+  [STEPS.REVIEW]: 2,
+  [STEPS.SAVING]: 2,
+};
+
+function StepDots({ current }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {["Photo", "Species", "Schedule"].map((label, i) => (
+        <div key={label} className="flex items-center gap-1.5">
+          <span
+            className={`h-1.5 rounded-full transition-all ${
+              i === current
+                ? "w-6 bg-brand"
+                : i < current
+                  ? "w-1.5 bg-brand"
+                  : "w-1.5 bg-line-strong"
+            }`}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AddPlantWizard() {
   const router = useRouter();
 
@@ -25,9 +56,9 @@ export default function AddPlantWizard() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
 
-  const [identifyResult, setIdentifyResult] = useState(null); // { photoPath, primary, alternatives, visible_health_issues, note }
+  const [identifyResult, setIdentifyResult] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [careProfile, setCareProfile] = useState(null); // species_care_profiles row
+  const [careProfile, setCareProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [nickname, setNickname] = useState("");
 
@@ -36,6 +67,13 @@ export default function AddPlantWizard() {
     if (!file) return;
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
+    setError(null);
+  }
+
+  function resetToPhoto() {
+    setStep(STEPS.PHOTO);
+    setIdentifyResult(null);
+    setSelectedCandidate(null);
     setError(null);
   }
 
@@ -93,7 +131,7 @@ export default function AddPlantWizard() {
 
   async function handleSave() {
     if (!nickname.trim()) {
-      setError("Please give your plant a nickname.");
+      setError("Please give your plant a name.");
       return;
     }
     setStep(STEPS.SAVING);
@@ -121,41 +159,65 @@ export default function AddPlantWizard() {
     }
   }
 
+  const busy = step === STEPS.IDENTIFYING || step === STEPS.LOADING_CARE;
+
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-xl font-semibold">Add a plant</h1>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/plants"
+          className="inline-flex items-center gap-1.5 text-sm text-ink-muted transition hover:text-ink"
+        >
+          <FiArrowLeft size={15} />
+          Cancel
+        </Link>
+        <StepDots current={STEP_INDEX[step]} />
+      </div>
+
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">
+        {step === STEPS.REVIEW || step === STEPS.SAVING
+          ? "Review the plan"
+          : step === STEPS.CANDIDATES || step === STEPS.LOADING_CARE
+            ? "Which one is it?"
+            : "Add a plant"}
+      </h1>
 
       {error && (
-        <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          <FiAlertCircle className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 rounded-xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger-soft-ink">
+          <FiAlertCircle className="mt-0.5 shrink-0" size={16} />
           <span>{error}</span>
         </div>
       )}
 
+      {/* ---------------------------------------------------------------- */}
       {(step === STEPS.PHOTO || step === STEPS.IDENTIFYING) && (
-        <div className="mt-6 space-y-4">
-          <p className="text-sm text-neutral-500">
-            Take a photo or choose one from your library — Claude will identify the
-            species.
+        <div className="space-y-4">
+          <p className="text-sm text-ink-muted">
+            Take a photo or pick one from your library — we&rsquo;ll identify the
+            species and build a care schedule.
           </p>
 
           <label
             htmlFor="photo-input"
-            className="flex aspect-square cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-neutral-300 bg-neutral-50"
+            className="block cursor-pointer overflow-hidden rounded-2xl border border-dashed border-line-strong bg-surface transition hover:border-brand"
           >
-            {photoPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoPreview}
-                alt="Selected plant"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-neutral-400">
-                <FiCamera size={32} />
-                <span className="text-sm">Tap to choose a photo</span>
-              </div>
-            )}
+            <div className="flex aspect-[4/3] items-center justify-center">
+              {photoPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoPreview}
+                  alt="Selected plant"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-ink-faint">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-muted">
+                    <FiCamera size={24} />
+                  </span>
+                  <span className="text-sm font-medium">Tap to choose a photo</span>
+                </div>
+              )}
+            </div>
           </label>
           <input
             id="photo-input"
@@ -168,36 +230,54 @@ export default function AddPlantWizard() {
           <button
             type="button"
             onClick={handleIdentify}
-            disabled={!photoFile || step === STEPS.IDENTIFYING}
-            className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
+            disabled={!photoFile || busy}
+            className="btn-primary w-full"
           >
-            {step === STEPS.IDENTIFYING ? "Identifying..." : "Identify plant"}
+            {busy ? (
+              <>
+                <FiRefreshCw size={16} className="animate-spin" />
+                Identifying...
+              </>
+            ) : (
+              <>
+                <PiPlantFill size={16} />
+                Identify plant
+              </>
+            )}
           </button>
         </div>
       )}
 
+      {/* ---------------------------------------------------------------- */}
       {step === STEPS.CANDIDATES && identifyResult && (
-        <div className="mt-6 space-y-3">
+        <div className="space-y-3">
           {identifyResult.primary.confidence === 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              <p className="font-medium">Couldn&rsquo;t identify a plant in that photo.</p>
-              {identifyResult.note && <p className="mt-1">{identifyResult.note}</p>}
+            <div className="card p-5 text-center">
+              <p className="font-medium text-ink">
+                Couldn&rsquo;t identify a plant in that photo
+              </p>
+              {identifyResult.note && (
+                <p className="mt-1.5 text-sm text-ink-muted">{identifyResult.note}</p>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setStep(STEPS.PHOTO);
-                  setIdentifyResult(null);
-                }}
-                className="mt-3 rounded-md border border-amber-300 px-3 py-1.5 text-sm font-medium"
+                onClick={resetToPhoto}
+                className="btn-secondary mt-4"
               >
                 Try another photo
               </button>
             </div>
           ) : (
             <>
-              <p className="text-sm text-neutral-500">
-                Select the species that matches your plant:
-              </p>
+              {photoPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoPreview}
+                  alt="Your plant"
+                  className="h-28 w-full rounded-2xl object-cover"
+                />
+              )}
+
               <CandidateCard
                 candidate={identifyResult.primary}
                 label="Best match"
@@ -212,68 +292,95 @@ export default function AddPlantWizard() {
                   disabled={step !== STEPS.CANDIDATES}
                 />
               ))}
+
               {identifyResult.visible_health_issues?.length > 0 && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  <p className="font-medium">Spotted in your photo:</p>
-                  <ul className="mt-1 list-inside list-disc">
+                <div className="rounded-xl bg-warn-soft px-3.5 py-3 text-sm text-warn-soft-ink">
+                  <p className="font-medium">Spotted in your photo</p>
+                  <ul className="mt-1 list-inside list-disc text-xs">
                     {identifyResult.visible_health_issues.map((issue, i) => (
                       <li key={i}>{issue}</li>
                     ))}
                   </ul>
                 </div>
               )}
+
+              <button
+                type="button"
+                onClick={resetToPhoto}
+                className="btn-ghost w-full !text-[13px]"
+              >
+                None of these — try another photo
+              </button>
             </>
           )}
         </div>
       )}
 
+      {/* ---------------------------------------------------------------- */}
       {step === STEPS.LOADING_CARE && (
-        <div className="mt-10 text-center text-sm text-neutral-500">
-          Generating a care profile for {selectedCandidate?.common_name}...
+        <div className="card flex flex-col items-center px-6 py-14 text-center">
+          <FiRefreshCw size={22} className="animate-spin text-brand" />
+          <p className="mt-4 font-medium text-ink">Building a care plan</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            for {selectedCandidate?.common_name}
+          </p>
         </div>
       )}
 
-      {step === STEPS.REVIEW && careProfile && (
-        <div className="mt-6 space-y-5">
-          <div>
-            <label htmlFor="nickname" className="mb-1 block text-sm font-medium">
-              Nickname
+      {/* ---------------------------------------------------------------- */}
+      {(step === STEPS.REVIEW || step === STEPS.SAVING) && careProfile && (
+        <div className="space-y-5">
+          <div className="card p-4">
+            <label
+              htmlFor="nickname"
+              className="mb-1.5 block text-sm font-medium text-ink"
+            >
+              What do you call it?
             </label>
             <input
               id="nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="e.g. Steve"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="field"
             />
+            <p className="mt-1.5 text-xs text-ink-faint">
+              {selectedCandidate?.common_name}
+              {selectedCandidate?.scientific_name &&
+                ` · ${selectedCandidate.scientific_name}`}
+            </p>
           </div>
 
           <CareProfileSummary careProfile={careProfile.care_profile} />
 
-          <div>
-            <p className="mb-2 text-sm font-medium">Care tasks</p>
-            <div className="space-y-2">
-              {tasks.map((task, i) => (
+          <div className="space-y-2.5">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-base font-semibold tracking-tight text-ink">
+                Care schedule
+              </h2>
+              <span className="text-xs text-ink-faint">adjust anytime</span>
+            </div>
+
+            {tasks.length === 0 ? (
+              <p className="card px-4 py-6 text-center text-sm text-ink-muted">
+                No suggested tasks — you can add your own after saving.
+              </p>
+            ) : (
+              tasks.map((task, i) => (
                 <TaskIntervalRow
                   key={task.task_type}
                   task={task}
                   onChange={(updated) => updateTask(i, updated)}
                 />
-              ))}
-              {tasks.length === 0 && (
-                <p className="text-sm text-neutral-500">
-                  No suggested tasks for this species — you can add custom ones after
-                  saving.
-                </p>
-              )}
-            </div>
+              ))
+            )}
           </div>
 
           <button
             type="button"
             onClick={handleSave}
             disabled={step === STEPS.SAVING}
-            className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
+            className="btn-primary w-full"
           >
             {step === STEPS.SAVING ? "Saving..." : "Save plant"}
           </button>

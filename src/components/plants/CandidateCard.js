@@ -1,3 +1,4 @@
+import { FiChevronRight } from "react-icons/fi";
 import { PLANT_TYPE_LABELS } from "@/lib/constants/plant-types";
 
 export default function CandidateCard({ candidate, label, onSelect, disabled }) {
@@ -8,25 +9,48 @@ export default function CandidateCard({ candidate, label, onSelect, disabled }) 
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className="w-full rounded-lg border border-neutral-200 p-4 text-left transition hover:border-neutral-400 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className={`card group w-full p-4 text-left transition hover:border-line-strong hover:shadow-sm disabled:opacity-55 ${
+        label ? "ring-1 ring-brand/25" : ""
+      }`}
     >
-      <div className="flex items-center justify-between">
-        {label && (
-          <span className="text-xs font-medium uppercase tracking-wide text-green-700">
-            {label}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {label && (
+            <span className="mb-1.5 inline-block rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-soft-ink">
+              {label}
+            </span>
+          )}
+          <p className="truncate font-semibold text-ink">
+            {candidate.common_name || "Unknown"}
+          </p>
+          {candidate.scientific_name && (
+            <p className="truncate text-sm italic text-ink-muted">
+              {candidate.scientific_name}
+            </p>
+          )}
+          <span className="pill mt-2 bg-surface-muted text-ink-muted">
+            {PLANT_TYPE_LABELS[candidate.type]}
           </span>
-        )}
-        <span className="text-xs text-neutral-500">{confidencePct}% confidence</span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="text-right">
+            <p className="text-sm font-semibold text-ink">{confidencePct}%</p>
+            <p className="text-[11px] text-ink-faint">match</p>
+          </div>
+          <FiChevronRight
+            size={18}
+            className="text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink"
+          />
+        </div>
       </div>
-      <p className="mt-1 font-medium text-neutral-900">
-        {candidate.common_name || "Unknown"}
-      </p>
-      {candidate.scientific_name && (
-        <p className="text-sm italic text-neutral-500">{candidate.scientific_name}</p>
-      )}
-      <span className="mt-2 inline-block rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">
-        {PLANT_TYPE_LABELS[candidate.type]}
-      </span>
+
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-muted">
+        <div
+          className="h-full rounded-full bg-brand transition-all"
+          style={{ width: `${confidencePct}%` }}
+        />
+      </div>
     </button>
   );
 }

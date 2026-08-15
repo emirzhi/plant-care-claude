@@ -118,6 +118,31 @@ summer/growing-season value; the user can edit the interval afterward
 - `pruning` — never auto-created (the care-profile prompt has no pruning
   interval field); available for the user to add manually.
 
+## Design system
+
+**Never hardcode Tailwind palette colors (`bg-white`, `text-neutral-500`,
+`border-neutral-200`) in components.** The original UI did, which broke badly
+in dark mode — the body took the dark background from `prefers-color-scheme`
+while every component still assumed a light one.
+
+- All colors are semantic tokens defined once in `src/app/globals.css`, with
+  a **complete** light palette on `:root` and only the overrides inside
+  `@media (prefers-color-scheme: dark)`. `@theme inline` maps them to
+  utilities, so `bg-surface` / `text-ink` / `border-line` auto-swap.
+- Token vocabulary: `canvas` (page bg), `surface` / `surface-muted` (cards,
+  fills), `line` / `line-strong` (borders), `ink` / `ink-muted` / `ink-faint`
+  (text), `brand` / `brand-hover` / `brand-ink` / `brand-soft` /
+  `brand-soft-ink`, and status trios `danger|warn|ok` each with
+  `-soft` / `-soft-ink` variants for tinted badges.
+- Shared primitives live in `@layer components`: `.field`, `.btn` +
+  `.btn-primary` / `.btn-secondary` / `.btn-ghost`, `.card`, `.pill`.
+  **Tailwind v4's `@apply` cannot reference another custom class** — writing
+  `.btn-primary { @apply btn ... }` fails the build with "Cannot apply unknown
+  utility class `btn`". The button base is therefore a grouped selector
+  (`.btn, .btn-primary, .btn-secondary, .btn-ghost { ... }`).
+- Task-type icons are centralized in
+  `src/components/care-tasks/taskIcons.js`, keyed by `CARE_TASK_TYPES`.
+
 ## Plants CRUD (slice 2)
 
 - `src/lib/plants/queries.js` — read helpers (`getPlantsForUser`,

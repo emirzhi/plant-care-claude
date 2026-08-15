@@ -9,78 +9,82 @@ export default function PlantForm({ action, plant, submitLabel }) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-4">
       {plant?.id && <input type="hidden" name="id" value={plant.id} />}
 
-      <div>
-        <label htmlFor="nickname" className="mb-1 block text-sm font-medium">
-          Nickname
-        </label>
-        <input
-          id="nickname"
-          name="nickname"
-          required
-          defaultValue={plant?.nickname ?? ""}
-          placeholder="e.g. Steve"
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-        />
-      </div>
+      <div className="card space-y-4 p-4">
+        <div>
+          <label htmlFor="nickname" className="mb-1.5 block text-sm font-medium text-ink">
+            Name
+          </label>
+          <input
+            id="nickname"
+            name="nickname"
+            required
+            defaultValue={plant?.nickname ?? ""}
+            placeholder="e.g. Steve"
+            className="field"
+          />
+        </div>
 
-      <div>
-        <label htmlFor="plant_type" className="mb-1 block text-sm font-medium">
-          Category
-        </label>
-        <select
-          id="plant_type"
-          name="plant_type"
-          required
-          defaultValue={plant?.plant_type ?? ""}
-          className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500"
-        >
-          <option value="" disabled>
-            Select a category
-          </option>
-          {PLANT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {PLANT_TYPE_LABELS[type]}
+        <div>
+          <label
+            htmlFor="plant_type"
+            className="mb-1.5 block text-sm font-medium text-ink"
+          >
+            Category
+          </label>
+          <select
+            id="plant_type"
+            name="plant_type"
+            required
+            defaultValue={plant?.plant_type ?? ""}
+            className="field"
+          >
+            <option value="" disabled>
+              Select a category
             </option>
-          ))}
-        </select>
+            {PLANT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {PLANT_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="photo" className="mb-1.5 block text-sm font-medium text-ink">
+            Photo{" "}
+            <span className="font-normal text-ink-faint">
+              {plant?.photo_url ? "(replace)" : "(optional)"}
+            </span>
+          </label>
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/*"
+            className="w-full text-sm text-ink-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink hover:file:bg-line"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-ink">
+            Notes <span className="font-normal text-ink-faint">(optional)</span>
+          </label>
+          <textarea
+            id="notes"
+            name="notes"
+            rows={3}
+            defaultValue={plant?.notes ?? ""}
+            className="field resize-none"
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="photo" className="mb-1 block text-sm font-medium">
-          Photo {plant?.photo_url ? "(replace)" : "(optional)"}
-        </label>
-        <input
-          id="photo"
-          name="photo"
-          type="file"
-          accept="image/*"
-          className="w-full text-sm text-neutral-600 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-neutral-200"
-        />
-      </div>
+      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
 
-      <div>
-        <label htmlFor="notes" className="mb-1 block text-sm font-medium">
-          Notes (optional)
-        </label>
-        <textarea
-          id="notes"
-          name="notes"
-          rows={3}
-          defaultValue={plant?.notes ?? ""}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-        />
-      </div>
-
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className="btn-primary w-full">
         {pending ? "Saving..." : submitLabel}
       </button>
     </form>

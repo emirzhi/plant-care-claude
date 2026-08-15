@@ -8,12 +8,13 @@ import {
   toggleTaskPauseAction,
 } from "@/lib/care-tasks/actions";
 import { getDueStatus } from "@/lib/care-tasks/dueStatus";
+import { CARE_TASK_ICONS } from "@/components/care-tasks/taskIcons";
 
 const TONE_CLASSES = {
-  paused: "bg-neutral-100 text-neutral-500",
-  overdue: "bg-red-100 text-red-700",
-  soon: "bg-amber-100 text-amber-700",
-  ok: "bg-green-100 text-green-700",
+  paused: "bg-surface-muted text-ink-faint",
+  overdue: "bg-danger-soft text-danger-soft-ink",
+  soon: "bg-warn-soft text-warn-soft-ink",
+  ok: "bg-ok-soft text-ok-soft-ink",
 };
 
 export default function CareTaskRow({ task }) {
@@ -22,6 +23,7 @@ export default function CareTaskRow({ task }) {
   const [error, setError] = useState(null);
 
   const status = getDueStatus(task);
+  const Icon = CARE_TASK_ICONS[task.task_type] ?? CARE_TASK_ICONS.custom;
 
   function run(action) {
     setError(null);
@@ -34,30 +36,58 @@ export default function CareTaskRow({ task }) {
     });
   }
 
-  function handleMarkDone() {
-    run(() => markTaskDoneAction(task.id, task.plant_id));
-  }
-
-  function handleIntervalBlur() {
-    if (interval === task.interval_days) return;
-    run(() => updateTaskIntervalAction(task.id, task.plant_id, interval));
-  }
-
-  function handleTogglePause() {
-    run(() => toggleTaskPauseAction(task.id, task.plant_id, !task.is_paused));
-  }
-
   return (
-    <div className="rounded-md border border-neutral-200 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-medium">{task.display_name}</p>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${TONE_CLASSES[status.tone]}`}>
+    <div
+      className={`card p-4 transition ${isPending ? "opacity-60" : ""} ${
+        task.is_paused ? "opacity-75" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-ink-muted">
+            <Icon size={16} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-ink">
+              {task.display_name}
+            </p>
+            {task.last_completed_at && (
+              <p className="text-xs text-ink-faint">
+                Last done {new Date(task.last_completed_at).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <span className={`pill shrink-0 ${TONE_CLASSES[status.tone]}`}>
           {status.label}
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-600">
-        <label className="flex items-center gap-1.5">
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => run(() => markTaskDoneAction(task.id, task.plant_id))}
+          disabled={isPending}
+          className="btn-primary !px-3 !py-1.5 !text-[13px]"
+        >
+          <FiCheck size={14} />
+          Done
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            run(() => toggleTaskPauseAction(task.id, task.plant_id, !task.is_paused))
+          }
+          disabled={isPending}
+          className="btn-secondary !px-3 !py-1.5 !text-[13px]"
+        >
+          {task.is_paused ? <FiPlay size={14} /> : <FiPause size={14} />}
+          {task.is_paused ? "Resume" : "Pause"}
+        </button>
+
+        <label className="ml-auto flex items-center gap-1.5 text-[13px] text-ink-muted">
           every
           <input
             type="number"
@@ -65,39 +95,20 @@ export default function CareTaskRow({ task }) {
             value={interval}
             disabled={isPending}
             onChange={(e) => setInterval(Number(e.target.value) || 1)}
-            onBlur={handleIntervalBlur}
-            className="w-14 rounded-md border border-neutral-300 px-2 py-1 text-center"
+            onBlur={() => {
+              if (interval !== task.interval_days) {
+                run(() =>
+                  updateTaskIntervalAction(task.id, task.plant_id, interval),
+                );
+              }
+            }}
+            className="field w-14 !px-2 !py-1 text-center !text-[13px]"
           />
           days
         </label>
-
-        <button
-          type="button"
-          onClick={handleMarkDone}
-          disabled={isPending}
-          className="flex items-center gap-1 rounded-md bg-neutral-900 px-2.5 py-1 text-white transition hover:bg-neutral-800 disabled:opacity-50"
-        >
-          <FiCheck size={14} />
-          Mark done
-        </button>
-
-        <button
-          type="button"
-          onClick={handleTogglePause}
-          disabled={isPending}
-          className="flex items-center gap-1 rounded-md border border-neutral-300 px-2.5 py-1 transition hover:bg-neutral-50 disabled:opacity-50"
-        >
-          {task.is_paused ? <FiPlay size={14} /> : <FiPause size={14} />}
-          {task.is_paused ? "Resume" : "Pause"}
-        </button>
       </div>
 
-      {task.last_completed_at && (
-        <p className="mt-1.5 text-xs text-neutral-400">
-          Last done {new Date(task.last_completed_at).toLocaleDateString()}
-        </p>
-      )}
-      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
     </div>
   );
 }

@@ -10,33 +10,55 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, display_name, timezone, reminder_hour")
+    .select("email, display_name, avatar_url, timezone, reminder_hour")
     .eq("id", user.id)
     .single();
 
+  const initial = (profile?.display_name || profile?.email || "?")
+    .charAt(0)
+    .toUpperCase();
+
   return (
-    <div className="mx-auto max-w-md space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {profile?.display_name || profile?.email}
-        </p>
+    <div className="space-y-7">
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">Settings</h1>
+
+      <div className="card flex items-center gap-3 p-4">
+        {profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.avatar_url}
+            alt=""
+            className="h-11 w-11 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-soft text-base font-semibold text-brand-soft-ink">
+            {initial}
+          </span>
+        )}
+        <div className="min-w-0">
+          {profile?.display_name && (
+            <p className="truncate text-sm font-medium text-ink">
+              {profile.display_name}
+            </p>
+          )}
+          <p className="truncate text-sm text-ink-muted">{profile?.email}</p>
+        </div>
       </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-faint">
           Notifications
         </h2>
         <PushToggle />
       </section>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-faint">
           Daily digest
         </h2>
-        <p className="mb-3 text-sm text-neutral-500">
-          You&rsquo;ll get one notification a day listing overdue tasks, sent at this
-          hour in your local time.
+        <p className="text-sm text-ink-muted">
+          One notification a day listing everything that&rsquo;s overdue, sent at
+          this hour in your local time.
         </p>
         <ReminderSettingsForm profile={profile} />
       </section>

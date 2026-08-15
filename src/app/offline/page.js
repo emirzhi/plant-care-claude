@@ -9,12 +9,15 @@ export const metadata = {
 export default function OfflinePage() {
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="max-w-sm text-center">
-        <FiWifiOff size={40} className="mx-auto text-neutral-300" />
-        <h1 className="mt-4 text-lg font-semibold">You&rsquo;re offline</h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          Plant Care needs a connection to load your plants. Pages you&rsquo;ve
-          already visited stay available — reconnect to see the latest.
+      <div className="max-w-xs text-center">
+        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-muted text-ink-faint">
+          <FiWifiOff size={24} />
+        </span>
+        <h1 className="text-lg font-semibold tracking-tight text-ink">
+          You&rsquo;re offline
+        </h1>
+        <p className="mt-1.5 text-sm text-ink-muted">
+          Pages you&rsquo;ve already visited still work. Reconnect to load the rest.
         </p>
       </div>
     </main>

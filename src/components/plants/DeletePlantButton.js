@@ -15,7 +15,7 @@ export default function DeletePlantButton({ plantId }) {
     >
       <button
         type="submit"
-        className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-50"
+        className="btn !py-2 text-danger hover:bg-danger-soft"
       >
         <FiTrash2 size={15} />
         Delete

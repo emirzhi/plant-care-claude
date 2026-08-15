@@ -40,7 +40,31 @@ export async function getPlantsForUser(supabase, { plantType } = {}) {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return withSignedPhotoUrls(supabase, data ?? []);
+  const plants = await withSignedPhotoUrls(supabase, data ?? []);
+  return withOverdueCounts(supabase, plants);
+}
+
+// Attaches `overdue_count` to each plant so the list can badge plants that
+// need attention. One query for all of the user's due tasks (RLS already
+// scopes it to them), tallied in memory — not one query per plant.
+async function withOverdueCounts(supabase, plants) {
+  if (plants.length === 0) return plants;
+
+  const { data, error } = await supabase
+    .from("care_tasks")
+    .select("plant_id")
+    .eq("is_paused", false)
+    .lte("next_due_at", new Date().toISOString());
+
+  if (error) {
+    return plants.map((p) => ({ ...p, overdue_count: 0 }));
+  }
+
+  const counts = new Map();
+  for (const row of data ?? []) {
+    counts.set(row.plant_id, (counts.get(row.plant_id) ?? 0) + 1);
+  }
+  return plants.map((p) => ({ ...p, overdue_count: counts.get(p.id) ?? 0 }));
 }
 
 // Counts per plant_type for the current user, used to render tab badges.

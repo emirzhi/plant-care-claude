@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FiBell, FiBellOff } from "react-icons/fi";
+import { FiBell } from "react-icons/fi";
 import {
   isPushSupported,
   getExistingSubscription,
@@ -46,41 +46,63 @@ export default function PushToggle() {
     }
   }
 
-  if (!checked) return null;
+  if (!checked) {
+    return <div className="card h-[74px] animate-pulse bg-surface-muted" />;
+  }
 
   if (!supported) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="card px-4 py-3.5 text-sm text-ink-muted">
         This browser doesn&rsquo;t support push notifications.
       </p>
     );
   }
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleToggle}
-        disabled={busy}
-        className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition disabled:opacity-50 ${
-          subscribed
-            ? "border border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-            : "bg-neutral-900 text-white hover:bg-neutral-800"
-        }`}
-      >
-        {subscribed ? <FiBellOff size={16} /> : <FiBell size={16} />}
-        {busy
-          ? "Working..."
-          : subscribed
-            ? "Disable notifications on this device"
-            : "Enable notifications on this device"}
-      </button>
-      <p className="mt-2 text-xs text-neutral-500">
-        {subscribed
-          ? "This device will receive your daily digest of overdue tasks."
-          : "Each device you want reminders on needs to be enabled separately."}
+    <div className="card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
+              subscribed
+                ? "bg-brand-soft text-brand-soft-ink"
+                : "bg-surface-muted text-ink-faint"
+            }`}
+          >
+            <FiBell size={17} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink">Notifications</p>
+            <p className="truncate text-xs text-ink-muted">
+              {subscribed ? "On for this device" : "Off on this device"}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={busy}
+          role="switch"
+          aria-checked={subscribed}
+          aria-label="Toggle notifications on this device"
+          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-55 ${
+            subscribed ? "bg-brand" : "bg-line-strong"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${
+              subscribed ? "left-[22px]" : "left-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      <p className="mt-3 border-t border-line pt-3 text-xs text-ink-faint">
+        Each device needs to be enabled separately.
       </p>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );
 }
