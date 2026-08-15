@@ -14,6 +14,20 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Plant Care",
   description: "Track your plants and their care schedules.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Plant Care",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport = {
+  themeColor: "#166534",
 };
 
 export default function RootLayout({ children }) {

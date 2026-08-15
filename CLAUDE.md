@@ -12,8 +12,15 @@ react-icons, Anthropic SDK. Deploy target: Vercel (user deploys manually).
   `src/proxy.js` exporting `proxy(request)`, not `middleware.js`/`middleware()`.
   Don't recreate `middleware.js`.
 - Route group `src/app/(app)/` holds every authenticated page (shares the
-  header/nav layout + sign-out button). `src/app/login` and
-  `src/app/auth/callback` are the only public routes.
+  header/nav layout + sign-out button). `src/app/login`, `src/app/auth/callback`
+  and `src/app/offline` are the only public *pages*.
+- **`proxy.js` deliberately does not redirect `/api/*`.** Every API route
+  authenticates itself and returns a JSON 401. Redirecting them would (a)
+  break `/api/cron/push-digest`, which Vercel Cron calls with a bearer token
+  and no session cookie, and (b) turn a `fetch()`'s expected JSON 401 into a
+  307 to an HTML page. This was a real bug caught by end-to-end testing the
+  cron route against `npm start` — worth re-checking with curl if the proxy
+  matcher is ever changed.
 - Supabase client helpers, three variants, don't cross-use them:
   - `src/lib/supabase/client.js` — browser (anon key). Client components only.
   - `src/lib/supabase/server.js` — server (anon key, cookie-bound). Server
@@ -215,6 +222,40 @@ identification. Flag if that's needed later.
   `useActionState`/redirect needed since these mutate in place); the
   interval input commits on blur, not on every keystroke.
 
+## PWA + push (slice 5)
+
+- **Serwist config** in `next.config.mjs`: `swSrc: "src/app/sw.js"`,
+  `swDest: "public/sw.js"`, `disable` in dev. `src/app/sw.js` is the SW
+  source (precache + `defaultCache` runtime caching + `/offline` fallback +
+  the `push` / `notificationclick` handlers).
+- **`public/sw.js` is a build artifact, and is gitignored** — generated into
+  `public/` by `npm run build`, not hand-written. Don't edit it; edit
+  `src/app/sw.js`. It's regenerated on every build (including Vercel's), so
+  it never needs to be committed.
+- **Offline**: visited pages are available offline via `defaultCache`'s
+  NetworkFirst page strategy; never-visited pages fall back to `/offline`,
+  which is precached via `additionalPrecacheEntries`. Note that supplying
+  `additionalPrecacheEntries` **replaces** @serwist/next's automatic
+  `public/` scan, so icons/manifest are runtime-cached rather than precached.
+  `/offline` is also in `PUBLIC_PATHS` in `proxy.js` (it must render without
+  a session).
+- **Push**: `push_subscriptions` is per-device (one row per endpoint,
+  `endpoint` UNIQUE, upserted on re-subscribe). `src/lib/push/subscribeClient.js`
+  holds the browser side, `src/lib/push/webPush.js` the server side. A send
+  that returns 404/410 means the endpoint is dead — the cron route deletes
+  that row rather than retrying it forever.
+- **Daily digest cron**: `vercel.json` runs `/api/cron/push-digest` **hourly**
+  (`0 * * * *`). Each run selects users whose *local* hour (via
+  `Intl.DateTimeFormat` with their `profiles.timezone`) equals their
+  `reminder_hour` — that's how one hourly job delivers at each user's chosen
+  local time. Protected by `CRON_SECRET` (Vercel Cron sends it as
+  `Authorization: Bearer <CRON_SECRET>` automatically). Uses the
+  service-role admin client, since it deliberately reads across all users.
+- **Settings** (`/settings`) — push enable/disable per device + reminder hour
+  + timezone (with a "use detected timezone" helper). The timezone is
+  validated against `Intl` before saving; a bad value would silently exclude
+  the user from every digest.
+
 ## Build gotchas
 
 - **Next.js 16 uses `proxy.js`, not `middleware.js`.** See "Stack
@@ -223,9 +264,27 @@ identification. Flag if that's needed later.
   statically at build time (e.g. `/login`) — the page component wraps a
   client child in `<Suspense>` rather than calling the hook directly.
   Pattern: `src/app/login/page.js` + `src/app/login/LoginForm.js`.
-- **PWA service worker (Serwist)**: not wired up yet (slice 5). When it is,
-  verify by deleting `public/sw.js`, running a clean `npm run build`, and
-  confirming it's regenerated — Serwist fails silently under Turbopack.
+- **⚠️ Serwist does not work under Turbopack — `npm run build` must keep the
+  `--webpack` flag.** `@serwist/next` only hooks into the
+  `webpack(config, options)` callback in `next.config.mjs`; Turbopack never
+  calls that hook, so `InjectManifest` never runs and `public/sw.js` is not
+  generated. Next.js 16 defaults to Turbopack, hence
+  `"build": "next build --webpack"`.
+  *Verified empirically on Next 16.3.1:* a plain `next build` (Turbopack)
+  prints the `[@serwist/next]` Turbopack warning, then **fails** with
+  "This build is using Turbopack, with a `webpack` config and no `turbopack`
+  config" and emits no `sw.js`. So on this version the failure is loud, not
+  silent — **but only because there's no `turbopack` key in
+  `next.config.mjs`. Adding one would suppress that error and restore the
+  silent-failure mode** (build succeeds, no service worker). Don't add a
+  `turbopack` config without re-running the verification below.
+  `next dev` still uses Turbopack, with Serwist `disable`d there — so **there
+  is no service worker in dev**; test PWA/offline/push against
+  `npm run build && npm start`.
+  **To verify after any build-config change**: `rm -f public/sw.js`, run a
+  clean `npm run build`, and confirm `public/sw.js` reappears (~44KB).
+- **`"use server"` files can only export `async` functions** — a plain sync
+  helper export in an actions file is a hard Turbopack build error.
 
 ## Supabase project
 

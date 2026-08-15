@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GiPlantRoots } from "react-icons/gi";
+import { FiSettings } from "react-icons/fi";
 import SignOutButton from "@/components/layout/SignOutButton";
 
 export default function AppLayout({ children }) {
@@ -11,7 +12,16 @@ export default function AppLayout({ children }) {
             <GiPlantRoots size={22} className="text-green-700" />
             Plant Care
           </Link>
-          <SignOutButton />
+          <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-100"
+            >
+              <FiSettings size={16} />
+              Settings
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
