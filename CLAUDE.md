@@ -225,9 +225,19 @@ identification. Flag if that's needed later.
 ## PWA + push (slice 5)
 
 - **Serwist config** in `next.config.mjs`: `swSrc: "src/app/sw.js"`,
-  `swDest: "public/sw.js"`, `disable` in dev. `src/app/sw.js` is the SW
-  source (precache + `defaultCache` runtime caching + `/offline` fallback +
-  the `push` / `notificationclick` handlers).
+  `swDest: "public/sw.js"`. `src/app/sw.js` is the SW source (precache +
+  `defaultCache` runtime caching + `/offline` fallback + the `push` /
+  `notificationclick` handlers).
+- **The Serwist wrapper is applied only when `NODE_ENV === "production"`**,
+  and `withSerwistInit()` is *called* inside that branch too. Both details
+  matter:
+  - Serwist's `disable: true` option is **not** enough — the wrapper still
+    injects a `webpack` key into the config, which makes `next dev`
+    (Turbopack) hard-fail with "a `webpack` config and no `turbopack`
+    config". Gating the wrapper is what keeps `npm run dev` working.
+  - Calling `withSerwistInit()` at module scope prints a Turbopack warning
+    during dev even when the result is unused, hence the call sits inside
+    the conditional.
 - **`public/sw.js` is a build artifact, and is gitignored** — generated into
   `public/` by `npm run build`, not hand-written. Don't edit it; edit
   `src/app/sw.js`. It's regenerated on every build (including Vercel's), so
@@ -271,16 +281,15 @@ identification. Flag if that's needed later.
   generated. Next.js 16 defaults to Turbopack, hence
   `"build": "next build --webpack"`.
   *Verified empirically on Next 16.3.1:* a plain `next build` (Turbopack)
-  prints the `[@serwist/next]` Turbopack warning, then **fails** with
-  "This build is using Turbopack, with a `webpack` config and no `turbopack`
-  config" and emits no `sw.js`. So on this version the failure is loud, not
-  silent — **but only because there's no `turbopack` key in
+  **fails** with "This build is using Turbopack, with a `webpack` config and
+  no `turbopack` config" and emits no `sw.js`. So on this version the failure
+  is loud, not silent — **but only because there's no `turbopack` key in
   `next.config.mjs`. Adding one would suppress that error and restore the
   silent-failure mode** (build succeeds, no service worker). Don't add a
   `turbopack` config without re-running the verification below.
-  `next dev` still uses Turbopack, with Serwist `disable`d there — so **there
-  is no service worker in dev**; test PWA/offline/push against
-  `npm run build && npm start`.
+  `next dev` still uses Turbopack, with the Serwist wrapper skipped entirely
+  (see the PWA section) — so **there is no service worker in dev**; test
+  PWA/offline/push against `npm run build && npm start`.
   **To verify after any build-config change**: `rm -f public/sw.js`, run a
   clean `npm run build`, and confirm `public/sw.js` reappears (~44KB).
 - **`"use server"` files can only export `async` functions** — a plain sync
