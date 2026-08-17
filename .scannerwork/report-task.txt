@@ -1,0 +1,6 @@
+projectKey=plant-care-claude
+serverUrl=http://localhost:9001
+serverVersion=26.8.0.126808
+dashboardUrl=http://localhost:9001/dashboard?id=plant-care-claude
+ceTaskId=1e1612ce-45e1-4248-b66c-6b8aa8608443
+ceTaskUrl=http://localhost:9001/api/ce/task?id=1e1612ce-45e1-4248-b66c-6b8aa8608443
